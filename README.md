@@ -257,7 +257,7 @@ Password: elvin
 Steps Executed in SQL Command Prompt
 1.Create a pluggable database:
 sql
-create pluggable database wed_26642_biometric_Based_Transaction_System
+create pluggable database tue_26437_elvin_lostfound_db
   2  admin user tue_26437_elvin_lostfound_db identified by elvin
   3  file_name_convert=('D:\ORACLE\ORADATA\ORCADATA\XE\PDBseed\','D:\ORACLE\ORADATA\XE\tue_26437_elvin_lostfound_db\');
 
@@ -330,5 +330,125 @@ Proper implementation of relationships between tables.
 
 This phase successfully established the pluggable database and implemented the physical structure, enabling efficient data management for the Biometric based transaction system.
 
+## Phase V
+
+### Physical Database Structure
+
+Physical Database Structure converts the logical Entity-Relationship model into a physical Oracle database structure, implementing all required tables, relationships, and data integrity constraints to support biometric-based authentication for secure financial transactions.
+
+## 🧱 *Table Creation*
+
+Here are the created tables & codes used to create them
+
+📋 *User table* 
+
+```sql
+CREATE TABLE Users (
+    UserID INT PRIMARY KEY,
+    FirstName VARCHAR2(50),
+    LastName VARCHAR2(50),
+    Email VARCHAR2(100) UNIQUE NOT NULL,
+    UserType VARCHAR2(20) CHECK (UserType IN ('Student', 'Staff', 'Faculty')),
+    PhoneNumber VARCHAR2(15) DEFAULT NULL
+);
+```
 
 
+📋 *Item table*
+
+
+```sql
+CREATE TABLE Item (
+    ItemID INT PRIMARY KEY,
+    ItemName VARCHAR2(100),
+    Description VARCHAR2(255),
+    DateLost DATE,
+    LocationLost VARCHAR2(100),
+    Status VARCHAR2(20) CHECK (Status IN ('Lost', 'Found', 'Claimed')),
+    ReportedBy INT,
+    FOREIGN KEY (ReportedBy) REFERENCES Users(UserID)
+);
+```
+
+
+
+📋 *FoundItem table*
+
+```sql
+CREATE TABLE FoundItem (
+    FoundItemID INT PRIMARY KEY,
+    ItemID INT,
+    DateFound DATE,
+    LocationFound VARCHAR2(100),
+    FoundBy INT,
+    FOREIGN KEY (ItemID) REFERENCES Item(ItemID),
+    FOREIGN KEY (FoundBy) REFERENCES Users(UserID)
+);
+```
+
+📋 *Claim Table*
+
+```sql
+CREATE TABLE Claim (
+    ClaimID INT PRIMARY KEY,
+    ItemID INT,
+    ClaimedBy INT,
+    ClaimDate DATE,
+    Status VARCHAR2(20) CHECK (Status IN ('Pending', 'Approved', 'Rejected')),
+    AdminID INT,
+    FOREIGN KEY (ItemID) REFERENCES Item(ItemID),
+    FOREIGN KEY (ClaimedBy) REFERENCES Users(UserID),
+    FOREIGN KEY (AdminID) REFERENCES Users(UserID)
+);
+```
+📋 *Notification Table*
+```sql
+CREATE TABLE Notification (
+    NotificationID INT PRIMARY KEY,
+    UserID INT,
+    Message VARCHAR2(255),
+    DateSent DATE,
+    IsRead BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+```
+
+## *Inserting data*
+```
+-- Insert Users
+INSERT INTO Users VALUES (1, 'John', 'Doe', 'john.doe@example.com', 'Student', '0789123456');
+INSERT INTO Users VALUES (2, 'Jane', 'Smith', 'jane.smith@example.com', 'Staff', '0789988776');
+INSERT INTO Users VALUES (3, 'Elvin', 'Mugisha', 'elvin@example.com', 'Faculty', '0788344556');
+
+-- Insert Items
+INSERT INTO Item VALUES (100, 'Backpack', 'Black Adidas backpack', TO_DATE('2025-05-01','YYYY-MM-DD'), 'Library', 'Lost', 1);
+
+-- Insert Found Items
+INSERT INTO FoundItem VALUES (200, 100, TO_DATE('2025-05-02','YYYY-MM-DD'), 'Library Entrance', 2);
+
+-- Insert Claims
+INSERT INTO Claim VALUES (300, 100, 1, TO_DATE('2025-05-03','YYYY-MM-DD'), 'Pending', 3);
+
+-- Insert Notifications
+INSERT INTO Notification VALUES (400, 1, 'Your lost item has been found.', TO_DATE('2025-05-03','YYYY-MM-DD'), FALSE);
+ 
+```
+
+
+## *Integrity Validation Queries*
+
+### *Each Item Has At Most One Claim.*
+
+```sql
+        
+SELECT item_id, COUNT(*) AS num_claims
+FROM Claim
+GROUP BY item_id;
+```
+📌 Confirms no duplicate claims are made per item.
+
+🧾 Summary
+This phase successfully implements the physical database structure for the Lost & Found Item Management System using Oracle SQL. With all relationships, constraints, and data insertions tested, the system is now ready for real-time operations, procedure execution, and advanced PL/SQL programming.
+
+
+  
