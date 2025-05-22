@@ -451,4 +451,141 @@ GROUP BY item_id;
 This phase successfully implements the physical database structure for the Lost & Found Item Management System using Oracle SQL. With all relationships, constraints, and data insertions tested, the system is now ready for real-time operations, procedure execution, and advanced PL/SQL programming.
 
 
-  
+
+## Phase VI
+
+
+   
+1.###  *DDL (Data Definition Language) and DML (Data Manipulation Language)*
+
+```sql
+-- Insert example
+INSERT INTO Item VALUES (101, 'Phone', 'iPhone 12', TO_DATE('2025-05-05', 'YYYY-MM-DD'), 'Cafeteria', 'Lost', 1);
+
+-- Update example
+UPDATE Item
+SET Status = 'Claimed'
+WHERE ItemID = 100;
+
+-- Delete example
+DELETE FROM Notification WHERE NotificationID = 400;
+
+-- Alter table to add a column for tracking last update
+ALTER TABLE Item ADD LastUpdated DATE;
+
+-- Drop an unused column (if needed)
+-- ALTER TABLE Users DROP COLUMN PhoneNumber;
+```
+![DML DDL phase](https://github.com/user-attachments/assets/f4405d1f-ea23-4ead-8b5d-f774982dbe56)
+
+2.*Simple Problem Statement*
+
+*Problem Statement:*
+
+In the Lost & Found Item Management System, staff users need to efficiently retrieve information about lost items by location and report date, update item statuses when claimed, and handle errors in data manipulation. Modularizing these operations will improve maintainability and error handling.
+
+
+ Procedure: Fetch Lost Items by Location
+```sql
+CREATE OR REPLACE PROCEDURE GetLostItemsByLocation (
+    p_location IN VARCHAR2
+) IS
+BEGIN
+    FOR rec IN (
+        SELECT ItemName, Description, DateLost
+        FROM Item
+        WHERE LocationLost = p_location AND Status = 'Lost'
+    ) LOOP
+        DBMS_OUTPUT.PUT_LINE('Item: ' || rec.ItemName || ', Lost On: ' || rec.DateLost);
+    END LOOP;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error fetching lost items: ' || SQLERRM);
+END;
+/
+```
+
+Function: Count Claimed Items
+```sql
+CREATE OR REPLACE FUNCTION CountClaimedItems RETURN NUMBER IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM Item WHERE Status = 'Claimed';
+    RETURN v_count;
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN -1;
+END;
+/
+```
+Cursor + Exception Handling Example
+```sql
+DECLARE
+    CURSOR c_items IS
+        SELECT ItemID, ItemName FROM Item WHERE Status = 'Lost';
+    v_itemID Item.ItemID%TYPE;
+    v_name Item.ItemName%TYPE;
+BEGIN
+    OPEN c_items;
+    LOOP
+        FETCH c_items INTO v_itemID, v_name;
+        EXIT WHEN c_items%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Lost Item: ' || v_name || ' (ID: ' || v_itemID || ')');
+    END LOOP;
+    CLOSE c_items;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error processing cursor: ' || SQLERRM);
+END;
+/
+```
+Testing
+```sql
+-- Test the procedure
+EXEC GetLostItemsByLocation('Library');
+
+-- Test the function
+SELECT CountClaimedItems FROM dual;
+
+-- Use the package
+EXEC LostAndFoundPkg.ShowFoundItems;
+SELECT LostAndFoundPkg.GetTotalFound FROM dual;
+```
+
+Package Example
+a. Package Specification
+```sql
+CREATE OR REPLACE PACKAGE LostAndFoundPkg IS
+    PROCEDURE ShowFoundItems;
+    FUNCTION GetTotalFound RETURN NUMBER;
+END LostAndFoundPkg;
+/
+```
+b. Package Body
+```sql
+CREATE OR REPLACE PACKAGE BODY LostAndFoundPkg IS
+
+    PROCEDURE ShowFoundItems IS
+    BEGIN
+        FOR rec IN (SELECT ItemID, DateFound FROM FoundItem) LOOP
+            DBMS_OUTPUT.PUT_LINE('Item ID: ' || rec.ItemID || ', Found: ' || rec.DateFound);
+        END LOOP;
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+    END;
+
+    FUNCTION GetTotalFound RETURN NUMBER IS
+        total NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO total FROM FoundItem;
+        RETURN total;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RETURN -1;
+    END;
+
+END LostAndFoundPkg;
+/
+```
+
