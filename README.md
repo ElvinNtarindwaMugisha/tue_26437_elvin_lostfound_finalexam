@@ -237,4 +237,98 @@ Implementing this system reduces delays in item recovery, increases data accurac
 
 
 ---
+### 🌀 *Phase IV*
+
+### *Pluggable database creation*
+![finalexam phase4](https://github.com/user-attachments/assets/72c73eac-a5ba-4e35-8cae-8c94b18426ec)
+![finalexam phase4(1)](https://github.com/user-attachments/assets/3f15f39e-b9e7-4802-9cc4-ae8962c83400)
+
+
+📠 *What This Phase Covers*
+This phase focuses on creating a Pluggable Database (PDB) and converting the logical model into a physical database structure. It ensures that all tables, relationships, and constraints are implemented to meet project requirements.
+
+🔨*Database Creation*
+The Pluggable Database (PDB) was created using the following naming format:
+sql
+Database Name:tue_26437_elvin_lostfound_db
+Username: elvin
+Password: elvin
+
+Steps Executed in SQL Command Prompt
+1.Create a pluggable database:
+sql
+create pluggable database wed_26642_biometric_Based_Transaction_System
+  2  admin user tue_26437_elvin_lostfound_db identified by elvin
+  3  file_name_convert=('D:\ORACLE\ORADATA\ORCADATA\XE\PDBseed\','D:\ORACLE\ORADATA\XE\tue_26437_elvin_lostfound_db\');
+
+ Pluggable database created.
+
+2.Open the newly created PDB:
+
+sql
+ alter pluggable database tue_26437_elvin_lostfound_db open ;
+
+Pluggable database altered.
+
+Purpose: Makes the PDB active and ready for operations.
+
+3.save the newly created PDB.
+sql
+SQL> alter pluggable database tue_26437_elvin_lostfound_db save state;
+
+Pluggable database altered.
+
+Purpose: Ensures the PDB remains open after the database restarts.
+
+4. Set the Session Container
+   
+sql
+SQL> alter session set container =tue_26437_elvin_lostfound_db;
+
+Session altered.
+
+Purpose: Switches the session to the newly created PDB for subsequent operations.
+
+5.User Creation and Privilege Assignment
+
+Create a Database User
+sql
+SQL> create user elvin identified by elvin;
+
+User created.
+
+Purpose: Creates a new user, elvin, with the password elvin.
+
+Grant Basic Privileges
+sql
+ SQL> grant all privileges to elvin;
+
+Grant succeeded.
+
+Purpose: To assigns full privileges for database operations.
+
+### *Oracle Enterprise Manager (OEM)*
+
+Oracle Enterprise Manager (OEM) is not a PL/SQL keyword or feature—it’s Oracle’s web-based administrative console for the entire Oracle technology stack (databases, middleware, engineered systems, cloud services, etc.). When people mention OEM while discussing PL/SQL code, they’re usually talking about using the OEM interface to manage, monitor, or debug that code inside the database.
+
+### ⚖️ *Oracle Enterprise Manager (OEM)*
+
+The OEM interface confirmed:
+
+Successful creation of the database.
+
+Proper implementation of relationships between tables.
+
+### 📸 *OEM confirm successful database creation and table relationships.*
+
+![OEM(elv)](https://github.com/user-attachments/assets/4dffd428-7d50-40e8-aa9f-f1ed47a91dbd)
+![OEM(elv1)](https://github.com/user-attachments/assets/9a33ac9a-3f34-41ae-9fa7-32f9cde5e02d)
+
+
+
+### 🔭 *Conclusion About this phase*
+
+This phase successfully established the pluggable database and implemented the physical structure, enabling efficient data management for the Biometric based transaction system.
+
+
 
