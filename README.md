@@ -70,7 +70,7 @@ The system is designed to serve university environments where item loss and reco
 
 
 
-## ✳️ Phase II: Requirements and Business Process Modeling
+##  Phase II: Requirements and Business Process Modeling
 
 ---
 
@@ -166,7 +166,7 @@ The BPMN process consists of multiple swimlanes showing interactions between use
 Implementing this system reduces delays in item recovery, increases data accuracy, and supports secure, automated handling of claims. This reduces the workload on staff while enhancing trust and transparency for users—perfectly aligning with core MIS objectives in modern institutions.
 
 
-## 🌀 Phase III: Logical Model Design
+##  Phase III: Logical Model Design
 
 ---
 
