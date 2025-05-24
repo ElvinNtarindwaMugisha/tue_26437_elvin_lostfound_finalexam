@@ -251,62 +251,63 @@ This phase focuses on creating a Pluggable Database (PDB) and converting the log
 
 🔨*Database Creation*
 The Pluggable Database (PDB) was created using the following naming format:
-sql
+```sql
 Database Name:tue_26437_elvin_lostfound_db
 Username: elvin
 Password: elvin
+```
 
 Steps Executed in SQL Command Prompt
 1.Create a pluggable database:
-sql
+```sql
 create pluggable database tue_26437_elvin_lostfound_db
   2  admin user tue_26437_elvin_lostfound_db identified by elvin
   3  file_name_convert=('D:\ORACLE\ORADATA\ORCADATA\XE\PDBseed\','D:\ORACLE\ORADATA\XE\tue_26437_elvin_lostfound_db\');
 
  Pluggable database created.
-
+```
 2.Open the newly created PDB:
 
-sql
+```sql
  alter pluggable database tue_26437_elvin_lostfound_db open ;
 
 Pluggable database altered.
-
+```
 Purpose: Makes the PDB active and ready for operations.
 
 3.save the newly created PDB.
-sql
+```sql
 SQL> alter pluggable database tue_26437_elvin_lostfound_db save state;
 
 Pluggable database altered.
-
+```
 Purpose: Ensures the PDB remains open after the database restarts.
 
 4. Set the Session Container
    
-sql
+```sql
 SQL> alter session set container =tue_26437_elvin_lostfound_db;
 
 Session altered.
-
+```
 Purpose: Switches the session to the newly created PDB for subsequent operations.
 
 5.User Creation and Privilege Assignment
 
 Create a Database User
-sql
+```sql
 SQL> create user elvin identified by elvin;
 
 User created.
-
+```
 Purpose: Creates a new user, elvin, with the password elvin.
 
 Grant Basic Privileges
-sql
+```sql
  SQL> grant all privileges to elvin;
 
 Grant succeeded.
-
+```
 Purpose: To assigns full privileges for database operations.
 
 ### *Oracle Enterprise Manager (OEM)*
