@@ -132,7 +132,8 @@ Design your BPMN with these lanes to clarify responsibilities:
 
 ## 🗺️ 4. BPMN Diagram (UML Notation)
 
-![PHASEII](https://github.com/user-attachments/assets/0bfb1aa1-37ef-4f4b-9d2d-bc67d453cfc1)
+![bpmn](https://github.com/user-attachments/assets/7374a41e-9723-4595-987c-650d3510c892)
+
 
 
 ---
@@ -233,7 +234,8 @@ Implementing this system reduces delays in item recovery, increases data accurac
 
 > This ER diagram visually represents the logical relationships between entities:
 
-![PHASEIII](https://github.com/user-attachments/assets/865549c7-45a7-40d0-92b0-057850d2bb3b)
+![erd](https://github.com/user-attachments/assets/5c4faaf4-fdc4-4361-8df9-e44b73388cda)
+
 
 
 ---
@@ -931,6 +933,25 @@ END;
 | ✅ **Audit Status Logging** | Shows whether the action was allowed or denied                              |
 | 🧩 **MIS Integration**    | Feeds audit data to reports and dashboards for decision-making                  |
 
+
+## 🏁 Conclusion
+
+The **Lost & Found Item Management System** is a robust, secure, and well-structured Oracle PL/SQL-based application designed to digitize and streamline the process of reporting, tracking, and claiming lost items in institutional environments such as universities.
+
+Through the implementation of:
+
+- **Well-designed relational tables** with data integrity constraints
+- **Advanced PL/SQL features** like procedures, functions, packages, triggers, and compound triggers
+- **Security mechanisms** such as weekday/holiday restrictions and auditing
+- **Real-time tracking and logging** of user activity and sensitive operations
+
+…this system ensures **data accuracy**, **accountability**, and **user-friendly automation** of previously manual workflows.
+
+It also supports integration with **Management Information Systems (MIS)** by providing structured logs, audit trails, and access controls — which help in reporting, analytics, and decision-making.
+
+### 🎯 Final Outcome
+
+The system not only solves real-world inefficiencies in traditional lost-and-found tracking but also demonstrates how Oracle PL/SQL can be used to build **scalable**, **secure**, and **intelligent** database applications with both operational and administrative value.
 
 
 
