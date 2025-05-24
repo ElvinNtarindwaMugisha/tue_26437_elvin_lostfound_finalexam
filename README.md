@@ -589,3 +589,348 @@ END LostAndFoundPkg;
 /
 ```
 
+### *Phase VII*
+
+## 🗂 1. Problem Statement Development
+    
+### ✅ 1. Problem Statement Development
+📌 Problem Statement
+In our Lost & Found Item Management System, unauthorized or unintended modifications to the database—especially during restricted periods like weekdays and public holidays—could compromise the integrity and auditability of sensitive information such as user claims and item reports.
+
+To enhance system reliability, we propose implementing:
+
+Triggers to block unauthorized actions on specific days.
+
+Packages to automate auditing tasks.
+
+Auditing to track all critical operations (INSERT, UPDATE, DELETE) for accountability.
+
+🎯 Justification
+Triggers help enforce business rules automatically.
+
+Packages group auditing procedures and functions to make the system modular and reusable.
+
+Auditing ensures we maintain a secure and transparent trail of all sensitive database activity.
+
+## ✅*2. Trigger Implementation*
+
+### 📌 *Step 1: Create the Holiday Reference Table*
+
+```sql
+CREATE TABLE Holidays (
+    HolidayDate DATE PRIMARY KEY,
+    Description VARCHAR2(100)
+);
+```
+### 📌 *Step 2: Insert Upcoming Holidays (for testing, choose relevant dates)*
+```sql
+INSERT INTO Holidays VALUES (TO_DATE('2025-06-01', 'YYYY-MM-DD'), 'Heroes Day');
+INSERT INTO Holidays VALUES (TO_DATE('2025-06-05', 'YYYY-MM-DD'), 'Unity Day');
+COMMIT;
+```
+
+*📌 Step 3: Trigger to Restrict Weekday and Holiday Manipulations*
+
+
+*This trigger blocks INSERT/UPDATE/DELETE on the Item table:*
+```sql
+CREATE OR REPLACE TRIGGER trg_restrict_weekday_holiday
+BEFORE INSERT OR UPDATE OR DELETE ON Item
+FOR EACH ROW
+DECLARE
+    v_today DATE := SYSDATE;
+    v_day   VARCHAR2(10);
+    v_count NUMBER;
+BEGIN
+    SELECT TO_CHAR(v_today, 'DY') INTO v_day FROM dual;
+
+    -- Check if today is Mon-Fri
+    IF v_day IN ('MON', 'TUE', 'WED', 'THU', 'FRI') THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Modification not allowed on weekdays.');
+    END IF;
+
+    -- Check if today is a holiday
+    SELECT COUNT(*) INTO v_count FROM Holidays WHERE HolidayDate = TRUNC(v_today);
+    IF v_count > 0 THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Modification not allowed on holidays.');
+    END IF;
+END;
+
+```
+## * 🔨1. Simple Trigger Implementation*
+
+### ✅ Simple Trigger Implementation on Claim Table
+
+#### 🔹 BEFORE INSERT Trigger
+
+```sql
+CREATE OR REPLACE TRIGGER trg_claim_before_insert
+BEFORE INSERT ON Claim
+FOR EACH ROW
+BEGIN
+  IF :NEW.Status NOT IN ('Pending', 'Approved', 'Rejected') THEN
+    RAISE_APPLICATION_ERROR(-20010, 'Invalid status for a claim.');
+  END IF;
+END;
+```
+🔍 Purpose: Prevents inserting invalid status values even before the row hits the table.
+
+#### 🔹 Trigger 2: AFTER DELETE
+```sql
+CREATE OR REPLACE TRIGGER trg_claim_after_delete
+AFTER DELETE ON Claim
+FOR EACH ROW
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('Claim with ID ' || :OLD.claim_id || ' has been deleted.');
+END;
+```
+🔍 Purpose: Tracks deleted claim entries. In production, you'd usually log this to an AuditLog table instead of DBMS_OUTPUT.
+
+#### 📦 Optional Audit Logging in AFTER DELETE (Using Your Package)
+```sql
+CREATE OR REPLACE TRIGGER trg_claim_audit_after_delete
+AFTER DELETE ON Claim
+FOR EACH ROW
+BEGIN
+  pkg_audit_log.log_action(USERENV('SESSIONID'), 'DELETE', 'Claim', 'ALLOWED');
+END;
+```
+
+## 🔨 *2. Compound Trigger Implementation*
+
+✅ What Is a Compound Trigger?
+A compound trigger in Oracle is useful when:
+
+You’re updating multiple rows in a single operation (bulk update).
+
+You need to track state between row-level and statement-level parts of the trigger.
+
+You want to audit or validate actions that span more than one row in a transaction.
+
+📘 Example Use Case for Your Project
+Let’s say you want to:
+
+Track how many claims are attempted in one statement.
+
+Prevent more than 3 claims being inserted at once, to avoid abuse or mistakes.
+
+
+✅ Compound Trigger (on Claim table)
+
+```sql
+CREATE OR REPLACE TRIGGER trg_claim_bulk_limit
+FOR INSERT ON Claim
+COMPOUND TRIGGER
+
+  -- Declare a variable to count inserted claims in the same transaction
+  g_claim_count NUMBER := 0;
+
+BEFORE STATEMENT IS
+BEGIN
+  -- Reset count at start of the statement
+  g_claim_count := 0;
+END BEFORE STATEMENT;
+
+BEFORE EACH ROW IS
+BEGIN
+  -- Count each row BEFORE it is inserted
+  g_claim_count := g_claim_count + 1;
+END BEFORE EACH ROW;
+
+AFTER STATEMENT IS
+BEGIN
+  -- At the end of the bulk insert, reject if too many claims were inserted
+  IF g_claim_count > 3 THEN
+    RAISE_APPLICATION_ERROR(-20003, 'You cannot insert more than 3 claims at once.');
+  END IF;
+
+  -- Optionally log this operation into AuditLog
+  INSERT INTO AuditLog (UserID, Operation, TableName, Status)
+  VALUES (USERENV('SESSIONID'), 'INSERT', 'Claim', 'ALLOWED');
+END AFTER STATEMENT;
+
+END trg_claim_bulk_limit;
+/
+```
+
+---
+
+### 🧠 Explanation & Integration
+
+| **Component**       | **Purpose**                                              | **Compatibility**                                 |
+|---------------------|----------------------------------------------------------|---------------------------------------------------|
+| `BEFORE STATEMENT`  | Initializes a counter                                    | ✅ Works independently of other triggers           |
+| `BEFORE EACH ROW`   | Increments count for each insert                         | ✅ Does not conflict with existing auditing        |
+| `AFTER STATEMENT`   | Blocks operation if bulk insert > 3 rows; logs audit     | ✅ Fully compatible with your `AuditLog` table     |
+| `Audit Insert`      | Tracks that the action happened                          | ✅ Enhances system security and accountability     |
+
+🧪 Example Test Case (Should Fail)
+
+```sql
+-- This should raise an error because it inserts more than 3 claims
+INSERT INTO Claim (claim_id, item_id, claimed_by, claim_date, status, admin_id)
+SELECT 500 + ROWNUM, 100, 1, SYSDATE, 'Pending', 3
+FROM dual CONNECT BY LEVEL <= 4;
+```
+
+## *🛰️ 3. Auditing with Restrictions and Tracking*
+
+*📌 Step 1: Create an Audit Table*
+
+```sql
+CREATE TABLE AuditLog (
+    AuditID NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    UserID INT,
+    Operation VARCHAR2(10),
+    TableName VARCHAR2(30),
+    ActionDate TIMESTAMP DEFAULT SYSTIMESTAMP,
+    Status VARCHAR2(10)
+);
+```
+
+
+
+*📌 Step 2: Create a Trigger for Auditing*
+Example: Audit trigger on Claim table
+
+```sql
+CREATE OR REPLACE TRIGGER trg_audit_claim
+AFTER INSERT OR DELETE OR UPDATE ON Claim
+FOR EACH ROW
+DECLARE
+    v_status VARCHAR2(10) := 'ALLOWED';
+BEGIN
+    INSERT INTO AuditLog (UserID, Operation, TableName, Status)
+    VALUES (USERENV('SESSIONID'), ORA_SYSEVENT, 'Claim', v_status);
+END;
+```
+
+
+
+
+## 🔐 Auditing with Restrictions and Tracking
+
+This section of the system enhances **data security, accountability, and transparency** by implementing audit tracking, access restrictions, and reusable PL/SQL logic. It ensures that all critical changes to the database are monitored and unauthorized manipulations are prevented.
+
+---
+
+### ✅ 1. Audit Table: `AuditLog`
+
+A centralized log table was created to record sensitive operations such as `INSERT`, `UPDATE`, and `DELETE` on critical tables like `Claim`, `Users`, and `FoundItem`.
+
+```sql
+CREATE TABLE AuditLog (
+  AuditID NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  UserID INT,
+  Operation VARCHAR2(10),       -- e.g., INSERT, DELETE, UPDATE
+  TableName VARCHAR2(30),       -- e.g., 'Claim'
+  ActionDate TIMESTAMP DEFAULT SYSTIMESTAMP,
+  Status VARCHAR2(10)           -- e.g., 'ALLOWED', 'DENIED'
+);
+```
+
+✅ 2. Audit Triggers for Key Tables
+Audit triggers were implemented on the most sensitive tables.
+
+🔹 Claim Table Trigger
+```sql
+CREATE OR REPLACE TRIGGER trg_audit_claim
+AFTER INSERT OR DELETE OR UPDATE ON Claim
+FOR EACH ROW
+BEGIN
+  INSERT INTO AuditLog (UserID, Operation, TableName, Status)
+  VALUES (USERENV('SESSIONID'), ORA_SYSEVENT, 'Claim', 'ALLOWED');
+END;
+```
+🔹 Users Table Trigger
+```sql
+CREATE OR REPLACE TRIGGER trg_audit_users
+AFTER INSERT OR DELETE OR UPDATE ON Users
+FOR EACH ROW
+BEGIN
+  INSERT INTO AuditLog (UserID, Operation, TableName, Status)
+  VALUES (USERENV('SESSIONID'), ORA_SYSEVENT, 'Users', 'ALLOWED');
+END;
+```
+🔹 FoundItem Table Trigger
+```sql
+CREATE OR REPLACE TRIGGER trg_audit_founditem
+AFTER INSERT OR DELETE OR UPDATE ON FoundItem
+FOR EACH ROW
+BEGIN
+  INSERT INTO AuditLog (UserID, Operation, TableName, Status)
+  VALUES (USERENV('SESSIONID'), ORA_SYSEVENT, 'FoundItem', 'ALLOWED');
+END;
+```
+✅ 3. PL/SQL Audit Logging Package
+A reusable PL/SQL package was created to modularize audit logging for consistency and ease of maintenance.
+
+📦 Package Specification
+
+```sql
+CREATE OR REPLACE PACKAGE pkg_audit_log IS
+  PROCEDURE log_action(p_user_id INT, p_operation VARCHAR2, p_table_name VARCHAR2, p_status VARCHAR2);
+END pkg_audit_log;
+```
+📦 Package Body
+```sql
+CREATE OR REPLACE PACKAGE BODY pkg_audit_log IS
+  PROCEDURE log_action(p_user_id INT, p_operation VARCHAR2, p_table_name VARCHAR2, p_status VARCHAR2) IS
+  BEGIN
+    INSERT INTO AuditLog (UserID, Operation, TableName, Status)
+    VALUES (p_user_id, p_operation, p_table_name, p_status);
+  END;
+END pkg_audit_log;
+```
+📌 Trigger Using the Package
+```sql
+CREATE OR REPLACE TRIGGER trg_users_pkg_audit
+AFTER INSERT OR DELETE OR UPDATE ON Users
+FOR EACH ROW
+BEGIN
+  pkg_audit_log.log_action(USERENV('SESSIONID'), ORA_SYSEVENT, 'Users', 'ALLOWED');
+END;
+```
+
+✅ 4. Trigger to Block Unauthorized Changes on Weekdays & Holidays
+To prevent risky modifications, this trigger blocks INSERT, UPDATE, or DELETE on the Item table if:
+
+Today is Monday to Friday (weekday), or
+
+Today is a registered holiday in the Holidays table
+
+```sql
+CREATE OR REPLACE TRIGGER trg_restrict_weekday_holiday
+BEFORE INSERT OR UPDATE OR DELETE ON Item
+FOR EACH ROW
+DECLARE
+    v_today DATE := SYSDATE;
+    v_day   VARCHAR2(10);
+    v_count NUMBER;
+BEGIN
+    SELECT TO_CHAR(v_today, 'DY') INTO v_day FROM dual;
+
+    IF v_day IN ('MON', 'TUE', 'WED', 'THU', 'FRI') THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Modification not allowed on weekdays.');
+    END IF;
+
+    SELECT COUNT(*) INTO v_count FROM Holidays WHERE HolidayDate = TRUNC(v_today);
+    IF v_count > 0 THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Modification not allowed on holidays.');
+    END IF;
+END;
+```
+### 🧠 Summary: How This Enhances Security and Accountability
+
+| **Feature**              | **Description**                                                                 |
+|--------------------------|---------------------------------------------------------------------------------|
+| 🔐 **Access Restriction** | Prevents changes to data during weekdays and holidays                          |
+| 🧾 **Auditing**           | Logs all DML (INSERT, UPDATE, DELETE) operations on critical tables             |
+| 👤 **User Tracking**      | Captures user ID and session for accountability                                 |
+| ⏰ **Time Tracking**      | Records exact date and time of every action                                     |
+| ✅ **Audit Status Logging** | Shows whether the action was allowed or denied                              |
+| 🧩 **MIS Integration**    | Feeds audit data to reports and dashboards for decision-making                  |
+
+
+
+
